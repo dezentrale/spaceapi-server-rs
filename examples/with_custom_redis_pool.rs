@@ -1,9 +1,9 @@
-use spaceapi_server::api;
-use spaceapi_server::modifiers::StatusModifier;
-use spaceapi_server::SpaceapiServerBuilder;
-
 use r2d2::Pool;
 use redis::{Commands, RedisResult};
+use spaceapi_dezentrale::{Contact, IssueReportChannel, Location, State, Status, StatusBuilder};
+
+use spaceapi_dezentrale_server::modifiers::StatusModifier;
+use spaceapi_dezentrale_server::SpaceapiServerBuilder;
 
 type RedisPool = Pool<redis::Client>;
 
@@ -18,7 +18,7 @@ impl OpenStatusFromRedisModifier {
 }
 
 impl StatusModifier for OpenStatusFromRedisModifier {
-    fn modify(&self, status: &mut api::Status) {
+    fn modify(&self, status: &mut Status) {
         let mut conn = self.pool.get().unwrap();
         let redis_state: RedisResult<String> = conn.get("state_open");
         if let Some(state) = &mut status.state {
@@ -35,28 +35,30 @@ impl StatusModifier for OpenStatusFromRedisModifier {
 fn main() {
     env_logger::init();
 
-    let status = api::StatusBuilder::mixed("Mittelab")
+    let status = StatusBuilder::mixed("Mittelab")
         .logo("https://www.mittelab.org/images/logo.svg")
         .url("https://www.mittelab.org")
-        .location(api::Location {
-            address: Some("Piazza Libertà 5/B, 34132 Trieste (TS), Italy".into()),
+        .location(Location {
+            address: Some("Piazza Libertà 5/B, 34132 Trieste (TS), Italy".to_string()),
+            osm_link: None,
             lat: 45.656_652_6,
             lon: 13.773_387_2,
+            timezone: None,
         })
-        .contact(api::Contact {
-            email: Some("info@mittelab.org".into()),
-            irc: Some("irc://irc.freenode.net/#mittelab".into()),
-            twitter: Some("@mittelab".into()),
-            facebook: Some("https://facebook.com/mittelab".into()),
-            phone: Some("+390409776431".into()),
-            issue_mail: Some("sysadmin@mittelab.org".into()),
+        .contact(Contact {
+            email: Some("info@mittelab.org".to_string()),
+            irc: Some("irc://irc.freenode.net/#mittelab".to_string()),
+            twitter: Some("@mittelab".to_string()),
+            facebook: Some("https://facebook.com/mittelab".to_string()),
+            phone: Some("+390409776431".to_string()),
+            issue_mail: Some("sysadmin@mittelab.org".to_string()),
             ..Default::default()
         })
-        .add_issue_report_channel(api::IssueReportChannel::Email)
+        .add_issue_report_channel(IssueReportChannel::Matrix)
         .add_project("https://git.mittelab.org")
         .add_project("https://github.com/mittelab")
         .add_project("https://wiki.mittelab.org/progetti/")
-        .state(api::State::default())
+        .state(State::default())
         .build()
         .expect("Creating status failed");
 

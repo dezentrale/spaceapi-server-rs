@@ -5,8 +5,8 @@ use std::sync::Arc;
 use quick_error::quick_error;
 use redis::Commands;
 use redis::RedisError;
+use spaceapi_dezentrale::sensors::SensorTemplate;
 
-use crate::api;
 use crate::types::RedisPool;
 
 /// A specification of a sensor.
@@ -15,7 +15,7 @@ use crate::types::RedisPool;
 /// the ``data_key`` says how to find the sensor value in Redis.
 pub(crate) struct SensorSpec {
     /// A reference to an instantiated sensor template
-    pub(crate) template: Box<dyn api::SensorTemplate>,
+    pub(crate) template: Box<dyn SensorTemplate>,
     /// The data key that is used to store and update the sensor value
     pub(crate) data_key: String,
 }

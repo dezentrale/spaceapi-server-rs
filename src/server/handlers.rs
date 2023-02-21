@@ -1,13 +1,14 @@
 //! Handlers for the server.
 
+use iron::{headers, middleware, status};
 use iron::modifiers::Header;
 use iron::prelude::*;
-use iron::{headers, middleware, status};
 use log::{debug, error, info, warn};
 use router::Router;
 use serde::ser::{Serialize, SerializeMap, Serializer};
+use spaceapi_dezentrale::sensors::Sensors;
+use spaceapi_dezentrale::Status;
 
-use crate::api;
 use crate::modifiers;
 use crate::sensors;
 use crate::types::RedisPool;
@@ -30,7 +31,7 @@ impl Serialize for ErrorResponse {
 }
 
 pub(crate) struct ReadHandler {
-    status: api::Status,
+    status: Status,
     redis_pool: RedisPool,
     sensor_specs: sensors::SafeSensorSpecs,
     status_modifiers: Vec<Box<dyn modifiers::StatusModifier>>,
@@ -38,7 +39,7 @@ pub(crate) struct ReadHandler {
 
 impl ReadHandler {
     pub(crate) fn new(
-        status: api::Status,
+        status: Status,
         redis_pool: RedisPool,
         sensor_specs: sensors::SafeSensorSpecs,
         status_modifiers: Vec<Box<dyn modifiers::StatusModifier>>,
@@ -61,9 +62,11 @@ impl ReadHandler {
                 // Value could be read successfullly
                 Ok(value) => {
                     if status_copy.sensors.is_none() {
-                        status_copy.sensors = Some(api::Sensors {
+                        status_copy.sensors = Some(Sensors {
                             people_now_present: vec![],
                             temperature: vec![],
+                            humidity: vec![],
+                            power_consumption: vec![],
                         });
                     }
                     sensor_spec
@@ -141,7 +144,7 @@ impl UpdateHandler {
             .sensor_specs
             .iter()
             .find(|&spec| spec.data_key == sensor)
-            .ok_or_else(|| sensors::SensorError::UnknownSensor(sensor.into()))?;
+            .ok_or_else(|| sensors::SensorError::UnknownSensor(sensor.to_string()))?;
 
         // Store data
         sensor_spec.set_sensor_value(&self.redis_pool, value)
@@ -163,7 +166,7 @@ impl UpdateHandler {
     /// Build an error response with the specified `error_code` and the specified `reason` text.
     fn err_response(&self, error_code: status::Status, reason: &str) -> Response {
         let error = ErrorResponse {
-            reason: reason.into(),
+            reason: reason.to_string(),
         };
         let error_string = serde_json::to_string(&error).expect("Could not serialize error");
         Response::with((error_code, error_string))
@@ -234,7 +237,7 @@ mod tests {
     #[test]
     fn test_serialize_error_response() {
         let error = ErrorResponse {
-            reason: "foobared".into(),
+            reason: "foobared".to_string(),
         };
         let json = serde_json::to_string(&error).unwrap();
         assert_eq!(json, r#"{"status":"error","reason":"foobared"}"#);

@@ -35,8 +35,8 @@
 //! Create a `main.rs`:
 //!
 //! ```no_run
-//! use spaceapi_server::api::{Contact, Location, StatusBuilder};
-//! use spaceapi_server::SpaceapiServerBuilder;
+//! use spaceapi_dezentrale::{Contact, Location, StatusBuilder};
+//! use spaceapi_dezentrale_server::SpaceapiServerBuilder;
 //!
 //! fn main() {
 //!     // Create new minimal v14 Status instance
@@ -44,13 +44,14 @@
 //!         .logo("https://www.coredump.ch/logo.png")
 //!         .url("https://www.coredump.ch/")
 //!         .location(Location {
-//!             address: Some("Spinnereistrasse 2, 8640 Rapperswil, Switzerland".into()),
+//!             address: Some("Spinnereistrasse 2, 8640 Rapperswil, Switzerland".to_string()),
+//!             osm_link: None,
 //!             lat: 47.22936,
 //!             lon: 8.82949,
-//!         })
+//!         timezone: None,})
 //!         .contact(Contact {
-//!             irc: Some("irc://freenode.net/#coredump".into()),
-//!             twitter: Some("@coredump_ch".into()),
+//!             irc: Some("irc://freenode.net/#coredump".to_string()),
+//!             twitter: Some("@coredump_ch".to_string()),
 //!             ..Default::default()
 //!         })
 //!         .build()
@@ -85,20 +86,21 @@
 //! sensor template:
 //!
 //! ```rust
-//! use spaceapi_server::SpaceapiServerBuilder;
-//! use spaceapi_server::api::sensors::{PeopleNowPresentSensorTemplate, TemperatureSensorTemplate};
+//! use spaceapi_dezentrale::sensors::{PeopleNowPresentSensorTemplate, TemperatureSensorTemplate};
+//! use spaceapi_dezentrale::{Contact, Location, StatusBuilder};
+//! use spaceapi_dezentrale_server::{api, SpaceapiServerBuilder};
 //!
-//! # use spaceapi_server::api;
-//! # let status = api::StatusBuilder::v14("aa")
+//!
+//! # let status = StatusBuilder::v14("aa")
 //! #     .logo("https://example.com/logo.png")
 //! #     .url("https://example.com/")
-//! #     .location(api::Location {
-//! #         address: Some("addr".into()),
-//! #         lat: 47.0,
+//! #     .location(Location {
+//! #         address: Some("addr".to_string()),
+//! #         osm_link: None,lat: 47.0,
 //! #         lon: 8.0,
-//! #     })
-//! #     .contact(api::Contact {
-//! #         twitter: Some("@example".into()),
+//! #     timezone: None,})
+//! #     .contact(Contact {
+//! #         twitter: Some("@example".to_string()),
 //! #         ..Default::default()
 //! #     })
 //! #     .build()
@@ -107,23 +109,16 @@
 //! let server = SpaceapiServerBuilder::new(status)
 //!     .redis_connection_info("redis://127.0.0.1/")
 //!     .add_sensor(PeopleNowPresentSensorTemplate {
-//!         location: Some("Hackerspace".into()),
-//!         name: None,
-//!         description: None,
-//!         names: None,
-//!     }, "people_now_present".into())
+//!         metadata: Default::default()
+//!     }, "people_now_present".parse().unwrap())
 //!     .add_sensor(TemperatureSensorTemplate {
-//!         unit: "°C".into(),
-//!         location: "Room 1".into(),
-//!         name: None,
-//!         description: None,
-//!     }, "temp_room1".into())
+//!         metadata: Default::default(),
+//!         unit: "°C".to_string()
+//!     }, "temp_room1".parse().unwrap())
 //!     .add_sensor(TemperatureSensorTemplate {
-//!         unit: "°C".into(),
-//!         location: "Room 2".into(),
-//!         name: None,
-//!         description: None,
-//!     }, "temp_room2".into())
+//!         metadata: Default::default(),
+//!         unit: "°C".to_string()
+//!     }, "temp_room2".parse().unwrap())
 //!     .build()
 //! .expect("Could not initialize server");
 //! ```
@@ -186,20 +181,19 @@
 #![deny(missing_docs)]
 #![doc(html_root_url = "https://docs.rs/spaceapi-server")]
 
-pub use spaceapi as api;
-
 pub use iron::error::HttpResult;
 pub use iron::Listening;
+pub use spaceapi_dezentrale as api;
+
+pub use crate::errors::SpaceapiServerError;
+pub use crate::server::SpaceapiServer;
+pub use crate::server::SpaceapiServerBuilder;
 
 mod errors;
 pub mod modifiers;
 mod sensors;
 mod server;
 mod types;
-
-pub use crate::errors::SpaceapiServerError;
-pub use crate::server::SpaceapiServer;
-pub use crate::server::SpaceapiServerBuilder;
 
 /// Return own crate version. Used in API responses.
 pub fn get_version() -> &'static str {

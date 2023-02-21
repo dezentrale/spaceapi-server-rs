@@ -1,5 +1,5 @@
 [package]
-name = "spaceapi-server"
+name = "spaceapi-dezentrale-server"
 version = "0.6.0"
 documentation = "https://docs.rs/spaceapi-server"
 repository = "https://github.com/spaceapi-community/spaceapi-server-rs"
@@ -8,6 +8,8 @@ authors = [
     "Raphael Nestler <raphael.nestler@gmail.com>",
     "Danilo Bargen <mail@dbrgn.ch>",
     "Stefan Schindler <stefan@estada.ch>",
+    "mrtuxa <mrtuxa@leipzig.freifunk.net>",
+    "Moritz Kempe <moritzkempe@mailbox.org>"
 ]
 description = "A library that allows you to easily implement a SpaceAPI server."
 readme = "README.md"
@@ -32,7 +34,7 @@ urlencoded = "^0.6"
 router = "^0.6"
 serde = "^1.0"
 serde_json = "^1.0"
-spaceapi = "^0.8.1"
+spaceapi-dezentrale = "^0.8.999"
 quick-error = "2.0"
 
 

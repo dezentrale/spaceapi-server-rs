@@ -8,18 +8,17 @@ use iron::Iron;
 use log::debug;
 use redis::{ConnectionInfo, IntoConnectionInfo};
 use router::Router;
-
 use serde_json::map::Map;
 use serde_json::Value;
-
-mod handlers;
-
-use crate::api;
+use spaceapi_dezentrale::{get_version, Status};
+use spaceapi_dezentrale::sensors::SensorTemplate;
 
 use crate::errors::SpaceapiServerError;
 use crate::modifiers;
 use crate::sensors;
 use crate::types::RedisPool;
+
+mod handlers;
 
 enum RedisInfo {
     None,
@@ -31,7 +30,7 @@ enum RedisInfo {
 /// Builder to create a new [`SpaceapiServer`](struct.SpaceapiServer.html)
 /// instance.
 pub struct SpaceapiServerBuilder {
-    status: api::Status,
+    status: Status,
     redis_info: RedisInfo,
     sensor_specs: Vec<sensors::SensorSpec>,
     status_modifiers: Vec<Box<dyn modifiers::StatusModifier>>,
@@ -39,16 +38,16 @@ pub struct SpaceapiServerBuilder {
 
 impl SpaceapiServerBuilder {
     /// Create a new builder instance based on the provided static status data.
-    pub fn new(mut status: api::Status) -> SpaceapiServerBuilder {
+    pub fn new(mut status: Status) -> SpaceapiServerBuilder {
         // Instantiate versions object
         let mut versions = Map::new();
-        versions.insert("spaceapi-rs".into(), api::get_version().into());
-        versions.insert("spaceapi-server-rs".into(), crate::get_version().into());
+        versions.insert("spaceapi-dezentrale".to_string(), Value::from(get_version()));
+        versions.insert("spaceapi-dezentrale-server".to_string(), Value::from(crate::get_version()));
 
         // Add to extensions
         status
             .extensions
-            .insert("versions".into(), Value::Object(versions));
+            .insert("versions".parse().unwrap(), Value::Object(versions));
 
         SpaceapiServerBuilder {
             status,
@@ -104,9 +103,9 @@ impl SpaceapiServerBuilder {
 
     /// Add a new sensor.
     ///
-    /// The first argument is a ``api::SensorTemplate`` instance containing all static data.
+    /// The first argument is a ``SensorTemplate`` instance containing all static data.
     /// The second argument specifies how to get the actual sensor value from Redis.
-    pub fn add_sensor<T: api::SensorTemplate + 'static>(mut self, template: T, data_key: String) -> Self {
+    pub fn add_sensor<T: SensorTemplate + 'static>(mut self, template: T, data_key: String) -> Self {
         self.sensor_specs.push(sensors::SensorSpec {
             template: Box::new(template),
             data_key,
@@ -163,7 +162,7 @@ impl SpaceapiServerBuilder {
 /// The ``SpaceapiServer`` includes a web server through
 /// [Hyper](http://hyper.rs/hyper/hyper/server/index.html). Simply call the ``serve`` method.
 pub struct SpaceapiServer {
-    status: api::Status,
+    status: Status,
     redis_pool: RedisPool,
     sensor_specs: sensors::SafeSensorSpecs,
     status_modifiers: Vec<Box<dyn modifiers::StatusModifier>>,
@@ -203,9 +202,9 @@ impl SpaceapiServer {
         // Launch server process
         let router = self.route();
         println!("Starting HTTP server on:");
-        for a in socket_addr.to_socket_addrs()? {
+        /*for a in socket_addr.to_socket_addrs()? {
             println!("\thttp://{}", a);
-        }
+        }*/
         Iron::new(router).http(socket_addr)
     }
 }

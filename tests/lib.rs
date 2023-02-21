@@ -2,35 +2,38 @@ use std::io::ErrorKind;
 use std::net::Ipv4Addr;
 use std::net::TcpStream;
 
-use spaceapi_server::api;
-use spaceapi_server::{SpaceapiServer, SpaceapiServerBuilder};
+use spaceapi_dezentrale::{Contact, IssueReportChannel, Location, State, Status, StatusBuilder};
+
+use spaceapi_dezentrale_server::{SpaceapiServer, SpaceapiServerBuilder};
 
 /// Create a new status object containing test data.
-fn get_status() -> api::Status {
-    api::StatusBuilder::new("ourspace")
+fn get_status() -> Status {
+    StatusBuilder::new("ourspace")
         .logo("https://example.com/logo.png")
         .url("https://example.com/")
-        .location(api::Location {
-            address: Some("Street 1, Zürich, Switzerland".into()),
+        .location(Location {
+            address: Some("Street 1, Zürich, Switzerland".to_string()),
+            osm_link: None,
             lat: 47.123,
             lon: 8.88,
+            timezone: None,
         })
-        .contact(api::Contact {
-            email: Some("hi@example.com".into()),
-            ..api::Contact::default()
+        .contact(Contact {
+            email: Some("hi@example.com".to_string()),
+            ..Contact::default()
         })
-        .add_issue_report_channel(api::IssueReportChannel::Email)
-        .add_issue_report_channel(api::IssueReportChannel::Twitter)
-        .state(api::State {
+        .add_issue_report_channel(IssueReportChannel::Matrix)
+        .add_issue_report_channel(IssueReportChannel::Twitter)
+        .state(State {
             open: Some(false),
-            ..api::State::default()
+            ..State::default()
         })
         .build()
         .unwrap()
 }
 
 /// Create a new SpaceapiServer instance listening on the specified port.
-fn get_server(status: api::Status) -> SpaceapiServer {
+fn get_server(status: Status) -> SpaceapiServer {
     SpaceapiServerBuilder::new(status)
         .redis_connection_info("redis://127.0.0.1/")
         .build()

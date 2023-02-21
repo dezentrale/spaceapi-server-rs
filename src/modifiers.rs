@@ -1,12 +1,13 @@
 //! Modifiers which can be injected by the application logic to change the
 //! state dynamically per request.
 
-use crate::api;
+use spaceapi_dezentrale::sensors::{PeopleNowPresentSensor, Sensors};
+use spaceapi_dezentrale::Status;
 
 /// `StatusModifier`s are used to modify the status
 pub trait StatusModifier: Send + Sync {
     /// Called after all registered sensors are read
-    fn modify(&self, status: &mut api::Status);
+    fn modify(&self, status: &mut Status);
 }
 
 /// This modifier updates the opening state based on the
@@ -14,13 +15,13 @@ pub trait StatusModifier: Send + Sync {
 pub struct StateFromPeopleNowPresent;
 
 impl StatusModifier for StateFromPeopleNowPresent {
-    fn modify(&self, status: &mut api::Status) {
+    fn modify(&self, status: &mut Status) {
         // Update state depending on number of people present
         let people_now_present: Option<u64> = status
             .sensors
             .as_ref()
-            .and_then(|sensors: &api::Sensors| sensors.people_now_present.first())
-            .map(|sensor: &api::PeopleNowPresentSensor| sensor.value);
+            .and_then(|sensors: &Sensors| sensors.people_now_present.first())
+            .map(|sensor: &PeopleNowPresentSensor| sensor.value);
         if let Some(count) = people_now_present {
             let mut state = status.state.clone().unwrap_or_default();
             state.open = Some(count > 0);
@@ -41,13 +42,16 @@ mod tests {
     use super::*;
 
     mod state_from_people_now_present {
+        use spaceapi_dezentrale::{State, Status};
+        use spaceapi_dezentrale::sensors::Sensors;
+
         use super::*;
 
         #[test]
         fn no_sensors() {
-            let mut status = api::Status {
+            let mut status = Status {
                 sensors: None,
-                ..api::Status::default()
+                ..Status::default()
             };
             assert_eq!(status.state, None);
             StateFromPeopleNowPresent.modify(&mut status);
@@ -57,37 +61,39 @@ mod tests {
 
         #[test]
         fn no_people_present_sensor() {
-            let mut status = api::Status {
-                sensors: Some(api::Sensors {
+            let mut status = Status {
+                sensors: Some(Sensors {
                     people_now_present: vec![],
                     temperature: vec![],
+                    humidity: vec![],
+                    power_consumption: vec![],
                 }),
-                ..api::Status::default()
+                ..Status::default()
             };
             assert_eq!(status.state, None);
             StateFromPeopleNowPresent.modify(&mut status);
             assert_eq!(status.state, None);
         }
 
-        fn make_pnp_sensor(value: u64) -> api::PeopleNowPresentSensor {
-            api::PeopleNowPresentSensor {
-                location: None,
-                name: None,
+        fn make_pnp_sensor(value: u64) -> PeopleNowPresentSensor {
+            PeopleNowPresentSensor {
+                metadata: Default::default(),
                 names: None,
-                description: None,
                 value,
             }
         }
 
         #[test]
         fn zero_people_present() {
-            let mut status = api::Status {
-                sensors: Some(api::Sensors {
+            let mut status = Status {
+                sensors: Some(Sensors {
                     people_now_present: vec![make_pnp_sensor(0)],
                     temperature: vec![],
+                    humidity: vec![],
+                    power_consumption: vec![],
                 }),
-                state: Some(api::State::default()),
-                ..api::Status::default()
+                state: Some(State::default()),
+                ..Status::default()
             };
             status.state.as_mut().unwrap().message = Some("This will remain unchanged.".to_string());
             assert_eq!(
@@ -103,12 +109,14 @@ mod tests {
 
         #[test]
         fn one_person_present() {
-            let mut status = api::Status {
-                sensors: Some(api::Sensors {
+            let mut status = Status {
+                sensors: Some(Sensors {
                     people_now_present: vec![make_pnp_sensor(1)],
                     temperature: vec![],
+                    humidity: vec![],
+                    power_consumption: vec![],
                 }),
-                ..api::Status::default()
+                ..Status::default()
             };
             assert_eq!(status.state, None);
             StateFromPeopleNowPresent.modify(&mut status);
@@ -120,12 +128,14 @@ mod tests {
 
         #[test]
         fn two_people_present() {
-            let mut status = api::Status {
-                sensors: Some(api::Sensors {
+            let mut status = Status {
+                sensors: Some(Sensors {
                     people_now_present: vec![make_pnp_sensor(2)],
                     temperature: vec![],
+                    humidity: vec![],
+                    power_consumption: vec![],
                 }),
-                ..api::Status::default()
+                ..Status::default()
             };
             assert_eq!(status.state, None);
             StateFromPeopleNowPresent.modify(&mut status);
