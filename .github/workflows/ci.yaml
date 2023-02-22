@@ -8,24 +8,24 @@ on:
 jobs:
   build_and_test:
     runs-on: ubuntu-22.04
-    container: rust:1.37.1
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt install rustc cargo
       - run: cargo build
       - run: cargo test
 
   lint:
     runs-on: ubuntu-22.04
-    container: rust:1.67.1
     steps:
       - uses: actions/checkout@v3
       - run: rustup component add clippy
+      - run: sudo apt install rustc cargo
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
   fmt:
     runs-on: ubuntu-22.04
-    container: rust:1.67.1
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt install rustc cargo
       - run: rustup component add rustfmt
       - run: cargo fmt -- --check
